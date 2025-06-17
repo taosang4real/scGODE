@@ -1,0 +1,7 @@
+python3 main.py --config configs/main_config.yaml --mode pretrain_gae
+
+python3 main.py --config configs/main_config.yaml --mode train_joint --checkpoint_path /root/autodl-tmp/scGODE3/results/experiment_stable_start/checkpoints/gae_pretrain_best.pt
+
+python3 main.py --config configs/main_config.yaml --mode evaluate --checkpoint_path /root/autodl-tmp/scGODE3/results/experiment_stable_start/checkpoints/joint_train_best.pt --eval_type joint
+
+https://github.com/rsinghlab/scNODE.git

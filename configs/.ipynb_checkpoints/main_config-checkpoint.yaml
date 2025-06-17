@@ -1,0 +1,118 @@
+# configs/main_config.yaml
+
+# ------------------------- Data Configuration -------------------------
+data_params:
+  data_dir: "data/"
+  expr_filename: "ALL_cells_HVG_expr.csv"
+  meta_filename: "ALL_cells_meta.csv"
+  adj_filename: "model_input_adj_mat.npy"
+  day_column: "day"
+  epoch_fixed_sample_size_per_day: 200 # Reduced from 200
+  start_day_logic_for_pairs:
+    days: 12
+  excluded_day_for_eval: 8.25
+
+# ------------------------- Model Configuration -------------------------
+model_params:
+  num_genes: null
+  latent_dim: 64 # Reduced from 128
+
+  encoder:
+    type: "GNNEncoder"
+    gnn_layer_type: "GCNConv"
+    gnn_hidden_dims: [128, 64] # Reduced from [256, 128]
+    pooling_type: "TopKPooling"
+    pooling_ratios: [0.5, 0.5]
+    gnn_activation: "relu"
+    dropout_rate: 0.1
+
+  decoder:
+    type: "GNNDecoder"
+    gnn_layer_type: "GCNConv"
+    gnn_hidden_dims: [64, 128] # Reduced from [128, 256] (Input 64 -> GNN1_out 64 -> GNN2_out 128)
+    gnn_activation: "relu"
+    dropout_rate: 0.1
+    output_activation: null
+    output_channels: 1
+
+  node:
+    type: "NeuralODE"
+    dynamics_gnn_type: "GCNConv"
+    dynamics_hidden_dims: [64,64] # Reduced from [128, 128] (Operates on latent_dim 64)
+    dynamics_activation: "relu"
+    dynamics_dropout_rate: 0.1
+    solver_method: "dopri5"
+    solver_integrator: "odeint_adjoint"
+    solver_options:
+      rtol: 0.0001
+      atol: 0.00001
+
+# ------------------------- Training Configuration -------------------------
+training_params:
+  # General
+  device: "cuda"
+  num_epochs_gae_pretrain: 10
+  num_epochs_joint_train: 100
+  learning_rate_gae: 0.001
+  learning_rate_node: 0.001
+  learning_rate_joint: 0.0005
+  optimizer: "Adam"
+  weight_decay: 0.00001
+  lr_scheduler: "ReduceLROnPlateau"
+  lr_scheduler_params:
+    ReduceLROnPlateau:
+      factor: 0.5
+      patience: 10
+    StepLR:
+      step_size: 30
+      gamma: 0.1
+  gradient_clipping_norm: 1.0
+  gradient_accumulation_steps: 1
+
+  # GAE Pretraining specific
+  gae_pretrain_batch_size: 100 # Reduced from 100
+
+  # Joint Training specific
+  joint_train_collate_batch_size: 1
+  sub_batch_size_node: 10 # Adjusted (was 10, epoch_fixed_sample_size_per_day is now 100)
+  freeze_gae_after_pretrain: True
+
+  # DDP (Distributed Data Parallel)
+  ddp:
+    use_ddp: false
+    backend: "nccl"
+    init_method: "env://"
+
+  # Checkpointing
+  checkpoint_dir: "results/experiment_default/checkpoints"
+  save_checkpoint_freq_epochs: 5
+  early_stopping_patience: 20
+
+# ------------------------- Loss Weights Configuration -------------------------
+loss_weights:
+  # GAE Pretrain
+  L_recon_pretrain: 1.0
+
+  # Joint Train
+  L_recon_t0: 0.05
+  L_recon_t1_predicted: 0.15
+  L_OT_latent: 0.3
+  L_OT_expression: 0.5
+
+# ------------------------- Evaluation Configuration -------------------------
+evaluation_params:
+  eval_batch_size: 64
+  generate_umap_plots: true
+  umap_n_neighbors: 15
+  umap_min_dist: 0.1
+  umap_metric: "euclidean"
+  num_samples_for_umap: 500
+
+# ------------------------- Miscellaneous -------------------------
+seed: 42
+num_workers: 4
+logging:
+  log_level: "INFO"
+  log_file: "results/experiment_default/logs/training.log"
+  use_tensorboard: true
+  tensorboard_log_dir: "results/experiment_default/logs/tensorboard_events"

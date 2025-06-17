@@ -1,0 +1,15 @@
+{
+    "joint_prediction": {
+        "avg_total_loss": 1476.814208984375,
+        "L_KL_t0": 6.254759311676025,
+        "L_KL_t1_real": 10.420571327209473,
+        "L_CNF_NLL": 116.51863098144531,
+        "L_kinetic_energy": 5.02031946182251,
+        "L_jacobian_reg": 0.0,
+        "L_OT_latent": 6.070601463317871,
+        "L_recon_t0": 0.8844867944717407,
+        "L_recon_t1_predicted": 1.5446748733520508,
+        "L_OT_expression": 1357.2490234375,
+        "total_loss": 1476.814208984375
+    }
+}

@@ -1,0 +1,148 @@
+# configs/main_config.yaml
+
+# ------------------------- Data Configuration -------------------------
+data_params:
+  data_dir: "/root/autodl-tmp/data/"
+  expr_filename: "ALL_cells_HVG_expr.csv"
+  meta_filename: "ALL_cells_meta.csv"
+  adj_filename: "model_input_adj_mat.npy"
+  day_column: "day"
+  epoch_fixed_sample_size_per_day: 200
+  start_day_logic_for_pairs:
+    days: 8.25
+  excluded_day_for_eval: 12
+
+# ------------------------- Model Configuration -------------------------
+model_params:
+  num_genes: null
+  latent_dim: 128
+
+  encoder:
+    type: "GNNEncoder"
+    gnn_layer_type: "GCNConv"
+    gnn_hidden_dims: [256, 128]
+    pooling_type: "TopKPooling"
+    pooling_ratios: [0.5, 0.5]
+    gnn_activation: "elu"
+    dropout_rate: 0.1
+    final_mlp_layers: null
+    is_variational: true
+    log_var_clamp_min: -10.0
+    log_var_clamp_max: 10.0
+
+  decoder:
+    type: "GNNDecoder"
+    gnn_layer_type: "GCNConv"
+    gnn_hidden_dims: [128, 256]
+    gnn_activation: "elu"
+    dropout_rate: 0.1
+    output_activation: null
+    distribution: "gaussian" # "gaussian" or "no"
+    num_dist_params: 2
+    deterministic_criterion: "mse"
+
+  node:
+    type: "NeuralODE" # Options: "CNFIntegrator" or "NeuralODE"
+    dynamics_gnn_type: "GCNConv"
+    dynamics_hidden_dims: [128, 128] # Example of a deeper model
+    dynamics_activation: "elu"
+    dynamics_dropout_rate: 0.1
+    time_dependent: False
+    solver_method: "rk4"
+    solver_integrator: "odeint"
+    solver_options:
+      rtol: 1.0e-4
+      atol: 1.0e-5
+    num_ot_reg_intervals: 0
+    hutchinson_samples_divergence: 1
+
+  ot_params:
+    blur: 0.5
+    scaling: 0.75
+    reach: null
+
+# ------------------------- Training Configuration -------------------------
+training_params:
+  device: "cuda"
+  num_epochs_gae_pretrain: 50
+  num_epochs_joint_train: 100
+  joint_training_mode: "latent_only" # Options: "latent_only" or "end_to_end"
+
+  learning_rate: 0.0001
+
+  param_groups:
+    - name: "encoder"
+      trainable: false
+      lr_multiplier: 1.0
+    - name: "dynamics_model"
+      trainable: true
+      lr_multiplier: 1.0
+    - name: "decoder"
+      trainable: false # In latent_only mode, decoder is effectively not used
+      lr_multiplier: 1.0
+
+  optimizer: "AdamW"
+  weight_decay: 1.0e-5
+  lr_scheduler: "ReduceLROnPlateau"
+  lr_scheduler_params:
+    ReduceLROnPlateau:
+      factor: 0.5
+      patience: 15
+  gradient_clipping_norm: 1.0
+  gradient_accumulation_steps: 1
+  use_amp: True
+
+  kl_annealing:
+    enabled: true
+    warmup_epochs: 20
+    anneal_epochs: 50
+
+  gae_pretrain_batch_size: 64
+  joint_train_collate_batch_size: 1
+
+  ddp:
+    use_ddp: false
+    backend: "nccl"
+    init_method: "env://"
+
+  checkpoint_dir: "results/experiment_default/checkpoints"
+  save_checkpoint_freq_epochs: 5
+  early_stopping_patience: 60
+
+# ------------------------- Loss Weights Configuration -------------------------
+loss_weights:
+  L_recon_pretrain: 1.0
+  L_KL_latent: 0.01
+
+  L_CNF_NLL: 0.01
+  L_kinetic_energy: 0.01
+  L_jacobian_reg: 0.01
+
+  L_recon_t0: 1.0
+  L_recon_t1_predicted: 1.0
+
+  L_OT_latent: 0.1
+  L_OT_expression: 0.1
+  L_OT_reg_trajectory: 0.0
+
+# ------------------------- Evaluation Configuration -------------------------
+evaluation_params:
+  eval_batch_size: 64
+  joint_eval_cell_sample_size: 64
+  generate_umap_plots: true
+  umap_n_neighbors: 15
+  umap_min_dist: 0.1
+  umap_metric: "euclidean"
+  num_samples_for_umap: 500
+  output_dir: "results/experiment_default/evaluation_output"
+
+# ------------------------- Miscellaneous -------------------------
+experiment_name: "experiment_vgae_cnf"
+seed: 42
+num_workers: 4
+logging:
+  log_level: "INFO"
+  log_file: "results/experiment_vgae_cnf/logs/training.log"
+  use_tensorboard: true
+  tensorboard_log_dir: "results/experiment_vgae_cnf/logs/tensorboard_events"
+
