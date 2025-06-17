@@ -6,4 +6,4 @@ python3 main.py --config configs/main_config.yaml --mode evaluate --checkpoint_p
 
 https://github.com/rsinghlab/scNODE.git
 
-how are you
+fine thak
